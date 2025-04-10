@@ -1,7 +1,7 @@
 import express from 'express';
 import bodyParser from 'body-parser';
 import mongoose from 'mongoose';
-import { twilio } from 'twilio';
+import { Twilio } from 'twilio';
 import moment from 'moment-timezone';
 import cron from 'node-cron';
 
@@ -15,13 +15,13 @@ const TWILIO_WHATSAPP_FROM = process.env.TWILIO_WHATSAPP_FROM!;
 const TWILIO_WHATSAPP_TO = process.env.TWILIO_WHATSAPP_TO!;
 
 // Create Twilio client
-const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+const client = new Twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
 
 // MongoDB connection URI
 const MONGODB_URI = process.env.MONGODB_URI!;
 
 // Connect to MongoDB
-mongoose.connect(MONGODB_URI, { useNewUrlParser: true, useUnifiedTopology: true })
+mongoose.connect(MONGODB_URI)
   .then(() => console.log('Connected to MongoDB'))
   .catch((error) => console.log('Error connecting to MongoDB:', error));
 
@@ -30,6 +30,7 @@ const taskSchema = new mongoose.Schema({
   message: String,
   dueDate: Date,
   reminderDate: Date,
+  reminderSent: { type: Boolean, default: false },
 });
 const Task = mongoose.model('Task', taskSchema);
 
@@ -52,7 +53,7 @@ function convertUTCToIST(utcDateStr: string) {
 // Webhook to handle incoming WhatsApp messages
 app.post('/webhook', async (req, res) => {
   const messageBody = req.body.Body; // Get the message body
-  const [message, dueDateStr, reminderBeforeStr] = messageBody.split('|').map(v => v.trim());
+  const [message, dueDateStr, reminderBeforeStr] = messageBody.split('|').map((v: string) => v.trim());
 
   // Convert the due date from IST to UTC
   const dueDateInUTC = convertISTToUTC(dueDateStr);
